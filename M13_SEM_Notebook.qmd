@@ -1,0 +1,1036 @@
+---
+title: "Structural Equation Modeling in R: Study Note"
+author: "Carmen Lia Jimenez Rodriguez"
+format:
+  html:
+    toc: true
+    toc-title: "Contents"
+    toc-depth: 3
+    number-sections: true
+    smooth-scroll: true
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# Introduction
+
+## Purpose of the Assignment
+
+The purpose of this study note is to understand the fundamentals of Structural Equation Modeling (SEM) using R and the lavaan package. This document follows the UCLA seminar and explores how SEM can be used to analyze relationships between observed and latent variables.
+
+## What Is Structural Equation Modeling?
+
+Structural Equation Modeling is a statistical approach that allows researchers to examine multiple relationships between variables within a single model. It combines concepts from regression analysis, path analysis, and confirmatory factor analysis.
+
+From a marketing research perspective, SEM is particularly useful because it allows researchers to study concepts that cannot be measured directly, such as customer satisfaction, brand loyalty, and purchase intention.
+
+## Relationship to Regression and CFA
+
+SEM extends traditional regression analysis by allowing researchers to examine several relationships simultaneously. It also incorporates confirmatory factor analysis (CFA), which helps determine whether observed indicators appropriately measure underlying latent constructs.
+
+# Data and Software
+
+## Required Packages
+
+```{r}
+library(lavaan)
+```
+
+## Importing the Data
+
+The dataset used in this study comes from the UCLA SEM seminar and focuses on student academic achievement.
+
+```{r}
+dat <- read.csv(
+  "https://stats.idre.ucla.edu/wp-content/uploads/2021/02/worland5.csv"
+)
+```
+
+## Examining the Data
+
+Before estimating any statistical model, it is important to understand the structure and characteristics of the dataset.
+
+```{r}
+str(dat)
+head(dat)
+dim(dat)
+summary(dat)
+```
+
+The dataset includes nine observed variables:
+
+- motiv: Motivation
+- harm: Harmony
+- stabi: Stability
+- ppsych: Negative Parental Psychology
+- ses: Socioeconomic Status
+- verbal: Verbal IQ
+- read: Reading
+- arith: Arithmetic
+- spell: Spelling
+
+These variables are used to examine three underlying constructs: Adjustment, Risk, and Achievement.
+
+## Covariance Matrix
+
+The covariance matrix helps us understand how variables change together.
+
+```{r}
+round(cov(dat), 3)
+```
+
+## Correlation Matrix
+
+The correlation matrix provides a standardized measure of the strength and direction of relationships between variables.
+
+```{r}
+round(cor(dat), 3)
+```
+
+There are three important covariance matrices in SEM:
+
+- **Population covariance matrix:** Represents the true covariance relationships in the population.
+- **Sample covariance matrix:** Represents the covariance relationships calculated from the observed sample.
+- **Model-implied covariance matrix:** Represents the covariance relationships predicted by the proposed statistical model.
+
+One of the main objectives of SEM is to determine how closely the model-implied covariance matrix reproduces the observed sample covariance matrix.
+
+The cov() function calculates the sample covariance matrix because the available observations represent a sample rather than the entire population. It uses n - 1 in the denominator to estimate population covariance.
+
+# SEM Concepts
+
+## Observed and Latent Variables
+
+An observed variable is a variable that can be directly measured. For example, motivation, reading scores, and arithmetic scores are observed variables in the UCLA dataset.
+
+A latent variable represents an underlying concept that cannot be measured directly. Instead, it is estimated using multiple observed indicators.
+
+The three latent constructs in this example are:
+
+- **Adjustment:** Measured by motivation, harmony, and stability.
+- **Risk:** Measured by negative parental psychology, socioeconomic status, and verbal IQ.
+- **Achievement:** Measured by reading, arithmetic, and spelling.
+
+## Exogenous and Endogenous Variables
+
+An exogenous variable is a variable that is not predicted by another variable within the specified model.
+
+An endogenous variable is a variable that is predicted by one or more variables within the model.
+
+For example, when Adjustment and Risk predict Achievement, Adjustment and Risk are exogenous variables, while Achievement is an endogenous variable.
+
+## Measurement and Structural Models
+
+A measurement model explains the relationship between latent constructs and their observed indicators.
+
+A structural model explains the relationships between variables, including relationships between latent constructs.
+
+Understanding this distinction is important because researchers need to evaluate how constructs are measured before interpreting relationships between them.
+
+
+
+## Additional SEM Concepts
+
+- **Indicator:** An observed variable used to measure a latent construct.
+- **Factor:** An underlying construct represented by multiple indicators.
+- **Factor loading:** The estimated relationship between a latent factor and an observed indicator.
+- **Regression path:** The relationship between a predictor and an outcome.
+- **Residual:** The portion of a variable that is not explained by the model.
+- **Intercept:** The expected value of an outcome when its predictors equal zero.
+- **Covariance:** A measure of how two variables change together.
+
+## Path Diagrams
+
+Path diagrams provide a visual representation of the relationships included in an SEM model.
+
+Rectangles represent observed variables, while circles or ovals represent latent variables. Single-headed arrows represent regression relationships or factor loadings. Double-headed arrows represent variances or covariances.
+
+## Matrix Notation
+
+Structural relationships can be represented using matrices.
+
+The Gamma matrix represents regression paths from exogenous variables to endogenous variables. The Beta matrix represents relationships among endogenous variables.
+
+The purpose of matrix notation is to organize complex relationships within a single statistical framework.
+
+# lavaan Syntax
+
+Understanding lavaan syntax is essential because each operator represents a specific statistical relationship.
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `~` | Regression | `read ~ motiv` |
+| `=~` | Latent variable definition | `adjust =~ motiv + harm + stabi` |
+| `~~` | Variance or covariance | `motiv ~~ harm` |
+| `~1` | Intercept or mean | `read ~ 1` |
+| `1*` | Fixes a parameter to one | `f =~ 1*q01` |
+| `NA*` | Frees a parameter | `f =~ NA*q01` |
+| `a*` | Labels a parameter | `f =~ a*q01` |
+
+The regression operator represents a directional relationship, while the covariance operator represents an association without specifying a direction of prediction.
+
+# Regression and Path Analysis
+
+## Simple Regression
+
+Simple regression examines the relationship between one independent variable and one dependent variable.
+
+In this example, motivation is used to predict reading performance.
+
+```{r}
+fit_lm <- lm(read ~ motiv, data = dat)
+
+summary(fit_lm)
+```
+
+The regression coefficient indicates the expected change in reading performance associated with a one-unit increase in motivation.
+
+The intercept represents the predicted reading score when motivation equals zero.
+
+## Simple Regression Using lavaan
+
+The same relationship can be estimated using structural equation modeling.
+
+```{r}
+m1 <- '
+  read ~ 1 + motiv
+  motiv ~~ motiv
+'
+
+fit_lavaan <- sem(m1, data = dat)
+
+summary(fit_lavaan, standardized = TRUE)
+```
+
+Both approaches estimate the relationship between motivation and reading performance.
+
+However, lm() uses ordinary least squares, while lavaan uses maximum likelihood estimation by default.
+
+The residual variance represents the variability in reading performance that is not explained by motivation.
+
+This model has zero degrees of freedom because there are enough free parameters to reproduce the modeled sample statistics.
+
+```{r}
+coef(fit_lm)
+
+parameterEstimates(fit_lavaan)
+
+fitMeasures(fit_lavaan, "df")
+```
+
+## Multiple Regression
+
+Multiple regression allows researchers to examine how several predictors relate to one dependent variable.
+
+In this example, motivation and negative parental psychology are used to predict reading performance.
+
+```{r}
+m2 <- '
+  read ~ 1 + ppsych + motiv
+'
+
+fit2 <- sem(m2, data = dat)
+
+summary(fit2, standardized = TRUE)
+```
+
+Reading is the endogenous variable, while motivation and negative parental psychology are exogenous variables.
+
+Each regression coefficient represents the relationship between a predictor and reading performance while controlling for the other predictor.
+
+## Multivariate Regression
+
+Multivariate regression extends the previous model by including more than one dependent variable.
+
+```{r}
+m3a <- '
+  read ~ 1 + ppsych + motiv
+  arith ~ 1 + motiv
+'
+
+fit3a <- sem(m3a, data = dat)
+
+summary(fit3a, fit.measures = TRUE,
+        standardized = TRUE)
+```
+
+Reading and arithmetic are the endogenous variables.
+
+Motivation and negative parental psychology are the exogenous variables.
+
+By default, lavaan allows the residuals of the two dependent variables to covary in this model.
+
+## Multivariate Regression Without Residual Covariance
+
+```{r}
+m3d <- '
+  read ~ 1 + ppsych + motiv
+  arith ~ 1 + motiv
+  read ~~ 0*arith
+'
+
+fit3d <- sem(m3d, data = dat)
+
+summary(fit3d, fit.measures = TRUE,
+        standardized = TRUE)
+```
+
+This model restricts the residual covariance between reading and arithmetic to zero.
+
+Removing a free parameter increases the degrees of freedom and places an additional restriction on the model.
+
+## Fully Saturated Multivariate Regression
+
+```{r}
+m3e <- '
+  read ~ 1 + ppsych + motiv
+  arith ~ 1 + ppsych + motiv
+  read ~~ arith
+'
+
+fit3e <- sem(m3e, data = dat)
+
+summary(fit3e, fit.measures = TRUE,
+        standardized = TRUE)
+```
+
+The saturated model includes both predictors for each dependent variable and allows their residuals to covary.
+
+A saturated model reproduces the modeled sample statistics perfectly, but this does not necessarily mean that it provides the best theoretical explanation.
+
+## Comparing Regression Models
+
+```{r}
+regression_models <- list(
+  Simple = fit_lavaan,
+  Multiple = fit2,
+  Multivariate = fit3a,
+  Restricted = fit3d,
+  Saturated = fit3e
+)
+
+sapply(regression_models, function(x) {
+  fitMeasures(x, c("npar", "df", "chisq"))
+})
+```
+
+The comparison illustrates how adding or restricting parameters changes the degrees of freedom.
+
+Multiple regression involves several predictors and one dependent variable, whereas multivariate regression includes multiple dependent variables.
+
+SEM provides a broader framework that can also incorporate latent constructs, measurement models, and indirect relationships.
+
+# Path Analysis
+
+Path analysis allows researchers to examine several directional relationships among observed variables within one model.
+
+In this example, reading performance is also used to predict arithmetic performance.
+
+```{r}
+m4a <- '
+  read ~ 1 + ppsych + motiv
+  arith ~ 1 + motiv + read
+'
+
+fit4a <- sem(m4a, data = dat)
+
+summary(fit4a, fit.measures = TRUE,
+        standardized = TRUE)
+```
+
+Reading is predicted by motivation and negative parental psychology. Arithmetic is predicted by motivation and reading.
+
+This model demonstrates how motivation may be associated with arithmetic both directly and indirectly through reading performance.
+
+## Path Diagram
+
+```{mermaid}
+flowchart LR
+    A[Motivation] --> C[Reading]
+    B[Negative Parental Psychology] --> C
+    A --> D[Arithmetic]
+    C --> D
+```
+
+Each arrow represents a hypothesized regression relationship. The diagram helps distinguish direct relationships from possible indirect relationships.
+
+The exogenous predictors may also be associated with one another, although their covariance is not displayed in this simplified diagram.
+
+
+# Model-Fit Statistics
+
+Model fit helps researchers evaluate whether a proposed model adequately reproduces the relationships observed in the data.
+
+```{r}
+summary(fit4a, fit.measures = TRUE)
+
+fitMeasures(
+  fit4a,
+  c("chisq", "df", "pvalue", "cfi",
+    "tli", "rmsea", "srmr",
+    "baseline.chisq", "baseline.df")
+)
+```
+
+## Chi-Square
+
+The chi-square test evaluates the difference between the observed covariance matrix and the covariance matrix predicted by the model.
+
+A statistically significant result suggests that the model does not reproduce the observed covariance matrix exactly.
+
+However, chi-square is sensitive to sample size and should be interpreted alongside other fit indices.
+
+## CFI and TLI
+
+The Comparative Fit Index (CFI) and Tucker-Lewis Index (TLI) compare the proposed model with a baseline model.
+
+Values closer to 1 generally indicate better fit. Values of approximately 0.90 or higher are commonly considered acceptable, while values near 0.95 suggest stronger fit.
+
+## RMSEA
+
+The Root Mean Square Error of Approximation (RMSEA) evaluates approximate model fit while accounting for degrees of freedom.
+
+Values below 0.08 are commonly considered acceptable, while values below 0.05 suggest close fit.
+
+These thresholds should be treated as guidelines rather than strict rules.
+
+## Model Fit Interpretation
+
+The following table summarizes the fit statistics for the path analysis model.
+
+```{r}
+round(fitMeasures(
+  fit4a,
+  c("chisq", "df", "pvalue",
+    "cfi", "tli", "rmsea", "srmr")
+), 3)
+```
+
+The UCLA example illustrates that different fit statistics may lead to different conclusions. Although CFI and TLI suggest relatively strong fit, chi-square and RMSEA indicate that some model restrictions may not be appropriate.
+
+Therefore, it is important to evaluate the overall pattern of results rather than relying on only one statistic.
+
+## Model Identification
+
+- **Saturated model:** Reproduces all modeled sample statistics and has zero degrees of freedom.
+- **Just-identified model:** Has enough information to uniquely estimate its parameters, with zero degrees of freedom.
+- **Over-identified model:** Has positive degrees of freedom and allows researchers to evaluate model fit.
+- **Under-identified model:** Does not provide enough information to uniquely estimate all free parameters.
+
+For a covariance-only model with p observed variables, the number of unique sample covariance elements is p(p + 1)/2.
+
+Degrees of freedom represent the difference between the number of modeled sample statistics and the number of independently estimated parameters.
+
+Positive degrees of freedom are necessary for conventional global fit testing, but they do not alone guarantee identification.
+
+# Modification Indices
+
+Modification indices help identify parameters that could potentially improve model fit if they were freely estimated.
+
+```{r}
+modindices(fit4a, sort = TRUE)
+```
+
+A modification index estimates the potential reduction in model chi-square when a particular fixed parameter is freed.
+
+Each index evaluates one additional parameter, generally corresponding to one degree of freedom.
+
+The expected parameter change (EPC) estimates the value or change expected for that parameter if it is freely estimated.
+
+## Modified Path Model
+
+```{r}
+m4b <- '
+  read ~ 1 + ppsych + motiv
+  arith ~ 1 + motiv + read + ppsych
+'
+
+fit4b <- sem(m4b, data = dat)
+
+summary(fit4b, fit.measures = TRUE,
+        standardized = TRUE)
+```
+
+The modified model adds negative parental psychology as a predictor of arithmetic.
+
+This relationship may be theoretically reasonable because family circumstances could influence multiple aspects of academic performance.
+
+```{r}
+rbind(
+  Original = fitMeasures(
+    fit4a, c("chisq", "df", "cfi", "rmsea")
+  ),
+  Modified = fitMeasures(
+    fit4b, c("chisq", "df", "cfi", "rmsea")
+  )
+)
+```
+
+## Theoretical Justification
+
+Modification indices should not be followed automatically.
+
+Adding relationships simply to improve model fit can result in overfitting and reduce the ability of the model to perform well in another sample.
+
+From a research perspective, each modification should be supported by theory, previous research, or a reasonable explanation.
+
+# Measurement Model
+
+## One-Factor Measurement Model
+
+Before analyzing the complete structural model, it is useful to understand how a latent construct is measured.
+
+```{r}
+m5a <- '
+  risk =~ verbal + ses + ppsych
+  verbal ~ 1
+  ses ~ 1
+  ppsych ~ 1
+'
+
+fit5a <- cfa(m5a, data = dat)
+
+summary(fit5a, standardized = TRUE,
+        fit.measures = TRUE)
+```
+
+The latent construct Risk is measured using verbal IQ, socioeconomic status, and negative parental psychology.
+
+The first factor loading is fixed to one to establish the scale of the latent variable.
+
+An alternative identification method fixes the latent factor variance to one.
+
+```{r}
+fit5a_std <- cfa(
+  m5a,
+  data = dat,
+  std.lv = TRUE
+)
+
+summary(fit5a_std, standardized = TRUE)
+```
+
+Both methods establish a scale for the latent variable.
+
+## Three-Factor Measurement Model
+
+The complete measurement model includes Adjustment, Risk, and Achievement.
+
+```{r}
+measurement_model <- '
+  adjust =~ motiv + harm + stabi
+  risk =~ ppsych + ses + verbal
+  achieve =~ read + arith + spell
+'
+
+fit_measurement <- cfa(
+  measurement_model,
+  data = dat
+)
+
+summary(
+  fit_measurement,
+  fit.measures = TRUE,
+  standardized = TRUE
+)
+```
+
+## Factor Loadings
+
+```{r}
+measurement_results <- standardizedSolution(
+  fit_measurement
+)
+
+subset(measurement_results, op == "=~")
+```
+
+Factor loadings indicate how strongly each observed indicator is related to its corresponding latent construct.
+
+Larger absolute standardized loadings generally suggest stronger relationships between indicators and their factors.
+
+Negative loadings indicate an inverse relationship with the latent construct.
+
+## Residual Variances
+
+```{r}
+subset(
+  measurement_results,
+  op == "~~" & lhs == rhs
+)
+```
+
+Residual variances represent variability in the observed indicators that is not explained by their corresponding latent factors.
+
+## Measurement Model Fit
+
+```{r}
+round(fitMeasures(
+  fit_measurement,
+  c("chisq", "df", "pvalue",
+    "cfi", "tli", "rmsea", "srmr")
+), 3)
+```
+
+The measurement model should be evaluated using several fit statistics together with the factor loadings.
+
+A reasonable measurement model is important because poor measurement can affect the interpretation of structural relationships.
+
+## Measurement Model Diagram
+
+```{mermaid}
+flowchart LR
+    A((Adjustment)) --> A1[Motivation]
+    A --> A2[Harmony]
+    A --> A3[Stability]
+
+    R((Risk)) --> R1[Parental Psychology]
+    R --> R2[Socioeconomic Status]
+    R --> R3[Verbal IQ]
+
+    C((Achievement)) --> C1[Reading]
+    C --> C2[Arithmetic]
+    C --> C3[Spelling]
+```
+
+The diagram shows how the three latent constructs are represented by nine observed indicators. Residuals and factor covariances are omitted from this simplified diagram.
+
+# Structural Regression Model
+
+## Model With One Endogenous Latent Variable
+
+The structural model examines whether Adjustment and Risk predict Achievement.
+
+```{r}
+structural_model <- '
+  adjust =~ motiv + harm + stabi
+  risk =~ ppsych + ses + verbal
+  achieve =~ read + arith + spell
+
+  achieve ~ adjust + risk
+'
+
+fit_structural <- sem(
+  structural_model,
+  data = dat
+)
+
+summary(
+  fit_structural,
+  fit.measures = TRUE,
+  standardized = TRUE,
+  rsquare = TRUE
+)
+```
+
+Adjustment and Risk are exogenous latent variables, while Achievement is an endogenous latent variable.
+
+Unlike the measurement model, this model specifies directional relationships between the latent constructs.
+
+## Standardized Regression Paths
+
+```{r}
+structural_results <- standardizedSolution(
+  fit_structural
+)
+
+subset(structural_results, op == "~")
+```
+
+Standardized regression coefficients allow researchers to compare the relative strength of predictors measured on different scales.
+
+The interpretation of the Risk coefficient depends on how the factor is scaled. In this model, negative parental psychology is the first indicator and establishes the direction of the factor.
+
+## Covariance Between Latent Predictors
+
+```{r}
+subset(
+  structural_results,
+  op == "~~" &
+  lhs == "adjust" &
+  rhs == "risk"
+)
+```
+
+The covariance represents the relationship between Adjustment and Risk without specifying a directional effect between them.
+
+## Explained Variance
+
+```{r}
+inspect(fit_structural, "r2")
+```
+
+The R-squared value for Achievement represents the proportion of its variance explained by Adjustment and Risk.
+
+The remaining variance represents influences not explained by the proposed structural model.
+
+## Structural Model Diagram
+
+```{mermaid}
+flowchart LR
+    A((Adjustment)) --> C((Achievement))
+    R((Risk)) --> C
+    A <--> R
+```
+
+The single-headed arrows represent structural regression paths, while the double-headed arrow represents covariance between the exogenous constructs.
+
+## Structural Model Fit
+
+```{r}
+round(fitMeasures(
+  fit_structural,
+  c("chisq", "df", "pvalue",
+    "cfi", "tli", "rmsea", "srmr")
+), 3)
+```
+
+The structural model provides a useful framework for examining academic achievement. However, its adequacy should be evaluated using the overall fit indices and the theoretical meaning of its parameters.
+
+# Structural Model With Two Endogenous Variables
+
+This model examines whether Risk predicts both Adjustment and Achievement.
+
+Adjustment is also included as a predictor of Achievement.
+
+```{r}
+mediation_model <- '
+  adjust =~ motiv + harm + stabi
+  risk =~ ppsych + ses + verbal
+  achieve =~ read + arith + spell
+
+  adjust ~ a*risk
+
+  achieve ~ b*adjust + c_direct*risk
+
+  indirect := a*b
+  total := c_direct + a*b
+'
+
+fit_mediation <- sem(
+  mediation_model,
+  data = dat
+)
+
+summary(
+  fit_mediation,
+  fit.measures = TRUE,
+  standardized = TRUE,
+  rsquare = TRUE
+)
+```
+
+## Direct and Indirect Effects
+
+```{r}
+effects <- parameterEstimates(
+  fit_mediation,
+  standardized = TRUE
+)
+
+subset(effects, op == "~" | op == ":=")
+```
+
+The direct effect represents the relationship between Risk and Achievement without passing through Adjustment.
+
+The indirect effect represents the relationship between Risk and Achievement through Adjustment.
+
+The total effect is the sum of the direct and indirect effects.
+
+These relationships describe a proposed mechanism but do not establish causality by themselves.
+
+## Indirect Effect Diagram
+
+```{mermaid}
+flowchart LR
+    R((Risk)) -->|a| A((Adjustment))
+    A -->|b| C((Achievement))
+    R -->|Direct effect| C
+```
+
+## Gamma and Beta Matrices
+
+The Gamma matrix represents regression relationships from exogenous latent variables to endogenous latent variables.
+
+The Beta matrix represents relationships among endogenous latent variables.
+
+In this model, Risk predicts Adjustment and Achievement through Gamma paths.
+
+The relationship between Adjustment and Achievement is represented in the Beta matrix.
+
+# Model Comparison
+
+```{r}
+all_models <- list(
+  Simple_Regression = fit_lavaan,
+  Multiple_Regression = fit2,
+  Multivariate_Regression = fit3a,
+  Restricted_Regression = fit3d,
+  Saturated_Regression = fit3e,
+  Path_Analysis = fit4a,
+  Modified_Path = fit4b,
+  Measurement_Model = fit_measurement,
+  Structural_Model = fit_structural,
+  Indirect_Effects_Model = fit_mediation
+)
+
+comparison <- t(sapply(
+  all_models,
+  function(x) {
+    fitMeasures(
+      x,
+      c("npar", "chisq", "df",
+        "cfi", "tli", "rmsea", "srmr")
+    )
+  }
+))
+
+knitr::kable(
+  round(comparison, 3),
+  caption = "Summary of SEM Model Fit Statistics"
+)
+```
+
+This comparison summarizes the different statistical models examined throughout the study note.
+
+Because some models use different observed variables, the table should not be interpreted as a formal statistical comparison of every model.
+
+Models with zero degrees of freedom cannot be meaningfully evaluated using conventional global fit indices.
+
+# Interpretation of Model Results
+
+## Regression and Path Analysis
+
+The multivariate regression model produced a CFI of 0.991, a TLI of 0.957, and an RMSEA of 0.108. Although the incremental fit indices suggest good fit, the RMSEA indicates that the model has some limitations.
+
+After removing the residual covariance, the CFI decreased to 0.652 and the RMSEA increased to 0.483. These results indicate that removing this relationship substantially worsened model fit.
+
+The path analysis model produced a CFI of 0.994, a TLI of 0.971, an RMSEA of 0.088, and an SRMR of 0.015. Overall, the results provide mixed evidence of model fit.
+
+## Measurement and Structural Models
+
+The measurement and structural models produced the following results:
+
+- Chi-square: 148.982
+- Degrees of freedom: 24
+- CFI: 0.951
+- TLI: 0.927
+- RMSEA: 0.102
+- SRMR: 0.041
+
+The CFI and SRMR suggest relatively good fit. However, the RMSEA indicates that the proposed models may not adequately reproduce all relationships in the data.
+
+Interestingly, the measurement model, structural model, and indirect effects model produced identical fit statistics. These models represent different theoretical explanations but impose equivalent restrictions on the covariance structure.
+
+This demonstrates why researchers should evaluate both statistical results and theoretical reasoning.
+
+## Interpretation of Estimated Parameters
+
+```{r}
+paths <- subset(
+  standardizedSolution(fit_structural),
+  op == "~"
+)
+
+knitr::kable(
+  paths[, c("lhs", "rhs", "est.std", "pvalue")],
+  digits = 3
+)
+```
+
+```{r}
+loadings <- subset(
+  standardizedSolution(fit_measurement),
+  op == "=~"
+)
+
+knitr::kable(
+  loadings[, c("lhs", "rhs", "est.std", "pvalue")],
+  digits = 3
+)
+```
+
+The standardized estimates help identify the relative strength and direction of the relationships. Statistical significance and theoretical relevance should both be considered before drawing conclusions.
+
+# Practice Questions and Answers
+
+## Question 1: What is structural equation modeling?
+
+Structural Equation Modeling is a statistical framework that allows researchers to examine multiple relationships between observed and latent variables simultaneously. It combines measurement models with structural relationships to evaluate theoretical models.
+
+## Question 2: Which statistical models can be treated as special cases of SEM?
+
+Simple regression, multiple regression, multivariate regression, path analysis, confirmatory factor analysis, and structural regression can all be considered special cases of SEM.
+
+## Question 3: What is the difference between an observed variable and a latent variable?
+
+An observed variable can be directly measured, such as reading performance. A latent variable represents an underlying construct that is estimated through multiple observed indicators, such as academic achievement.
+
+## Question 4: What is the difference between an exogenous variable and an endogenous variable?
+
+An exogenous variable is not predicted by another variable within the model. An endogenous variable is explained or predicted by one or more variables included in the model.
+
+## Question 5: What is the difference between a measurement model and a structural model?
+
+A measurement model evaluates how observed indicators measure latent constructs. A structural model evaluates the relationships between variables, including relationships between latent constructs.
+
+## Question 6: What does the ~ operator mean in lavaan?
+
+The regression operator specifies a predictive relationship. For example, `read ~ motiv` indicates that motivation is used to predict reading performance.
+
+## Question 7: What does the =~ operator mean?
+
+This operator defines a latent construct using observed indicators.
+
+For example, `adjust =~ motiv + harm + stabi` specifies Adjustment as a latent variable measured by three indicators.
+
+## Question 8: What does the ~~ operator mean?
+
+This operator represents a variance when the same variable appears on both sides and a covariance when two different variables are specified.
+
+## Question 9: What is the difference between a regression path and a factor loading?
+
+A regression path represents a predictive relationship between variables. A factor loading represents the relationship between a latent construct and one of its observed indicators.
+
+## Question 10: What is the difference between a sample covariance matrix and a model-implied covariance matrix?
+
+The sample covariance matrix is calculated directly from observed data. The model-implied covariance matrix is calculated using the estimated parameters of the proposed model.
+
+SEM evaluates how closely the model-implied covariance matrix reproduces the observed covariance structure.
+
+## Question 11: Why does the cov() function produce a sample covariance matrix rather than a population covariance matrix?
+
+The function calculates covariance using the available sample observations. It divides by n - 1 to estimate population covariance without directly observing the entire population.
+
+## Question 12: What is the difference between multiple regression and multivariate regression?
+
+Multiple regression includes several independent variables and one dependent variable.
+
+Multivariate regression includes more than one dependent variable and allows researchers to examine multiple outcomes simultaneously.
+
+## Question 13: Why are some models saturated?
+
+A model is saturated when it has enough freely estimated parameters to reproduce all modeled sample statistics exactly.
+
+As a result, there are no remaining restrictions to evaluate through a global model-fit test.
+
+## Question 14: What does it mean when a model has zero degrees of freedom?
+
+It means that the number of independently estimated parameters equals the number of available modeled sample statistics.
+
+Although a saturated model can reproduce the sample statistics perfectly, this does not demonstrate that the proposed theory is correct.
+
+## Question 15: What does it mean when a model has negative degrees of freedom?
+
+Negative degrees of freedom indicate that there are more free parameters than available sample statistics.
+
+The model is under-identified and additional restrictions are necessary to obtain unique parameter estimates.
+
+## Question 16: What is the difference between the Gamma and Beta matrices?
+
+The Gamma matrix represents regression paths from exogenous latent variables to endogenous latent variables.
+
+The Beta matrix represents regression relationships among endogenous latent variables.
+
+In the indirect effects model, Risk predicts Adjustment and Achievement through Gamma paths, while Adjustment predicts Achievement through a Beta path.
+
+## Question 17: What is a modification index?
+
+A modification index estimates how much the model chi-square statistic could decrease if a currently fixed parameter were freely estimated.
+
+It helps researchers identify potential areas of model misspecification.
+
+## Question 18: Why should researchers not automatically follow modification-index recommendations?
+
+Researchers should avoid making changes solely to improve statistical fit because these changes may not have theoretical support.
+
+Following modification indices automatically can lead to overfitting and reduce the ability to replicate the findings in other samples.
+
+## Question 19: What is the difference between a direct effect and an indirect effect?
+
+A direct effect represents a relationship between two variables without passing through an intermediary variable.
+
+An indirect effect represents a relationship that operates through another variable.
+
+In this example, Risk may influence Achievement indirectly through Adjustment.
+
+```{r}
+subset(
+  parameterEstimates(fit_mediation),
+  op == ":="
+)
+```
+
+## Question 20: Which paths in the structural model are theoretically most important?
+
+The relationships from Adjustment to Achievement and from Risk to Achievement are central to the proposed research model.
+
+In the extended model, the relationship from Risk to Adjustment is also important because it introduces a possible indirect relationship with Achievement.
+
+## Question 21: How should the fit of the measurement model be evaluated?
+
+The measurement model should be evaluated using multiple fit statistics, factor loadings, residual variances, and theoretical consistency.
+
+In this analysis, the CFI of 0.951 and SRMR of 0.041 suggest relatively good fit. However, the RMSEA of 0.102 indicates potential model misspecification.
+
+Therefore, the evidence of model fit is mixed.
+
+## Question 22: How should the fit of the structural model be evaluated?
+
+The structural model should be evaluated using overall fit statistics, regression coefficients, statistical significance, explained variance, and theoretical relevance.
+
+In this analysis, the structural model produced the same global fit statistics as the measurement model.
+
+This suggests that global fit alone cannot determine which theoretical explanation is more appropriate.
+
+## Question 23: What conclusions can be drawn from the standardized estimates?
+
+Standardized estimates help compare the strength and direction of relationships between variables measured on different scales.
+
+```{r}
+subset(
+  standardizedSolution(fit_structural),
+  op == "~",
+  select = c(lhs, rhs, est.std, pvalue)
+)
+```
+
+Larger absolute standardized coefficients indicate stronger estimated relationships, but statistical significance and theoretical relevance should also be considered.
+
+## Question 24: What limitations should be considered when interpreting this SEM?
+
+Several limitations should be considered.
+
+First, statistical relationships do not automatically establish causality. Second, the results depend on the quality of the observed indicators and the assumptions of the statistical model.
+
+Additionally, some fit indices indicate that the proposed models may not adequately reproduce the observed covariance matrix.
+
+Finally, modifying a model using the same dataset may lead to overfitting. Future research should evaluate the model using independent samples.
+
+# Summary of Important Lessons
+
+Structural Equation Modeling provides a useful framework for examining complex relationships between variables.
+
+One of the most important lessons from this assignment is the distinction between measurement models and structural models. Before interpreting relationships between latent constructs, researchers need to understand how well those constructs are measured.
+
+Another important lesson is that model fit should not be evaluated using a single statistic. The results from this analysis demonstrate that a model can have a relatively strong CFI while still presenting limitations based on RMSEA.
+
+I also learned that adding more parameters can improve statistical fit, but this does not necessarily make a model more meaningful or theoretically appropriate.
+
+From a digital marketing and analytics perspective, SEM could be particularly useful for studying relationships between customer experience, satisfaction, perceived value, loyalty, and behavioral intentions.
+
+For example, SEM could help researchers examine whether customer experience influences the likelihood of returning to a restaurant directly or indirectly through overall satisfaction.
+
+Overall, this study note provides a useful foundation for applying SEM in future marketing research and data analysis projects.
+
+# References
+
+UCLA Statistical Methods and Data Analytics. n.d. "Introduction to Structural Equation Modeling (SEM) in R with lavaan." Accessed November 24, 2026. <https://stats.oarc.ucla.edu/r/seminars/rsem/>.
+
+# Appendix: Publication Links
+
+- [GitHub Repository](https://github.com/carmenjimenez97/M13_SEM_Notebook)
+- [GitHub Pages Website](https://carmenjimenez97.github.io/M13_SEM_Notebook/M13_SEM_Notebook.html)
